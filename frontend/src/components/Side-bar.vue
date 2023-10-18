@@ -6,7 +6,6 @@
       Longitude: {{ location.lng.toFixed(3) }}<br />
       Latitude: {{ location.lat.toFixed(3) }} <br />
       Zoom: {{ location.zoom.toFixed(0) }}<br />
-      <!-- {{ points }} -->
     </div>
     <div class="bottom">
       <div>Level:</div>
