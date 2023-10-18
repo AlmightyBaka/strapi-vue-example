@@ -7,6 +7,13 @@
       Latitude: {{ location.lat.toFixed(3) }} <br />
       Zoom: {{ location.zoom.toFixed(0) }}<br />
     </div>
+    <div>
+      <li v-for="level in levels" :key="level">
+        <a @click="getPoints(level)">
+          [{{ level }}]
+        </a>
+      </li>
+    </div>
     <div class="bottom">
       <div>Level:</div>
       <input
@@ -16,7 +23,7 @@
         @click="$emit('resetPoints')"
       /><br />
       <div>{{ message }}</div>
-      <button role="button" @click="getPoints">Get</button>
+      <button role="button" @click="getPoints()">Get</button>
       <button role="button" @click="postPoints">Send</button>
       <button role="button" @click="resetPoints">Clear</button>
     </div>
@@ -29,8 +36,17 @@ export default {
   emits: ['resetPoints', 'updatePoints'],
   data: () => ({
     message: '',
-    level: 0
+    level: 0,
+    levels: new Array<number>()
   }),
+  async mounted() {
+    const res = await this.fetch('GET', null, '?fields[0]=level')
+    if (!res.ok) return
+
+    const resJson = await res.json()
+    const levels: [number] = resJson.data.map((entry: any) => entry?.attributes?.level)
+    this.levels = levels.sort()
+  },
   methods: {
     async postPoints() {
       if (this.points.length <= 2) return
@@ -51,14 +67,20 @@ export default {
           { geolocation: this.points, level: this.level },
           `/${this.level.toString()}`
         )
+
+        this.levels.push(this.level)
       }
 
       // this.$emit('resetPoints')
     },
-    async getPoints() {
+    async getPoints(level?: number) {
+      const lvlToGet = typeof level === 'number' ? level : this.level
+      console.log(lvlToGet)
+      console.log(level)
+      console.log(this.level)
       this.message = ''
 
-      const res = await this.fetch('GET', null, `?filters[level][$eq]=${this.level.toString()}`)
+      const res = await this.fetch('GET', null, `?filters[level][$eq]=${lvlToGet.toString()}`)
       if (!res.ok) {
         this.message = 'Level not found'
 
@@ -162,6 +184,9 @@ button:hover {
 button:active {
   background-color: hsl(203, 43%, 54%);
   box-shadow: none;
+}
+li{
+  margin-left: 10px;
 }
 
 input {
