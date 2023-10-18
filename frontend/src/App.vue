@@ -1,6 +1,6 @@
 <template>
   <div id="layout">
-    <div id="map" class="map-container"></div>
+    <div ref="map" class="map-container"></div>
     <div id="sidebar">
       <h1>Area viewer</h1>
       <hr />
@@ -25,17 +25,11 @@
 <script lang="ts">
 import '../node_modules/mapbox-gl/dist/mapbox-gl.css'
 import mapboxgl from 'mapbox-gl'
-import type { MapMouseEvent, EventData } from 'mapbox-gl'
-
-mapboxgl.accessToken =
-  'pk.eyJ1IjoiYWxtaWdodHliYWthIiwiYSI6ImNsbm9uZHRnODBreWEycW9jdndjaTY3djgifQ.ulHCa8Y6P5nem5H-I2jEqg'
-
-let map: mapboxgl.Map
+import type { MapMouseEvent, EventData, Map } from 'mapbox-gl'
 
 export default {
-  props: ['modelValue'],
-  emits: ['update:modelValue', 'click:modelValue'],
   data: () => ({
+    map: {} as Map,
     location: {
       lng: 37.6139,
       lat: 55.7402,
@@ -48,10 +42,14 @@ export default {
     level: 0
   }),
   mounted() {
-    const { lng, lat, zoom, bearing, pitch } = this.location
+    // public token
+    mapboxgl.accessToken =
+      'pk.eyJ1IjoiYWxtaWdodHliYWthIiwiYSI6ImNsbm9uZHRnODBreWEycW9jdndjaTY3djgifQ.ulHCa8Y6P5nem5H-I2jEqg'
 
-    map = new mapboxgl.Map({
-      container: 'map',
+    // map setup
+    const { lng, lat, zoom, bearing, pitch } = this.location
+    this.map = new mapboxgl.Map({
+      container: this.$refs.map as HTMLElement,
       style: 'mapbox://styles/mapbox/dark-v11',
       center: [lng, lat],
       bearing,
@@ -59,8 +57,14 @@ export default {
       zoom
     })
 
+    // map events setup
     const updateLocation = () => {
-      this.location = this.getLocation()
+      this.location = {
+        ...this.map.getCenter(),
+        bearing: this.map.getBearing(),
+        pitch: this.map.getPitch(),
+        zoom: this.map.getZoom()
+      }
     }
     const addPoint = (event: MapMouseEvent & EventData) => {
       this.points.push({ ...event.lngLat })
@@ -69,29 +73,19 @@ export default {
       }
     }
 
-    map.on('move', updateLocation)
-    map.on('zoom', updateLocation)
-    map.on('rotate', updateLocation)
-    map.on('pitch', updateLocation)
-    map.on('click', addPoint)
+    this.map.on('move', updateLocation)
+    this.map.on('zoom', updateLocation)
+    this.map.on('rotate', updateLocation)
+    this.map.on('pitch', updateLocation)
+    this.map.on('click', addPoint)
   },
   unmounted() {
-    map.remove()
+    this.map.remove()
   },
   methods: {
-    addPoint(point: { lng: number; lat: number }) {
-      this.points.push(point)
-    },
-    getLocation() {
-      return {
-        ...map.getCenter(),
-        bearing: map.getBearing(),
-        pitch: map.getPitch(),
-        zoom: map.getZoom()
-      }
-    },
     async postPoints() {
       if (this.points.length <= 2) return
+
       this.sent = true
       this.resetMap()
 
@@ -100,7 +94,6 @@ export default {
         { geolocation: this.points, level: this.level },
         `/${this.level.toString()}`
       )
-
       if (res.status === 404) {
         res = await this.fetch('POST', { geolocation: this.points, level: this.level })
       }
@@ -112,14 +105,10 @@ export default {
       this.resetMap()
 
       const res = await this.fetch('GET', null, `?filters[level][$eq]=${this.level.toString()}`)
-      console.log(res)
-      console.log(`http://localhost:1337/api/plots?filters[level][$eq]=${this.level.toString()}`)
       if (!res.ok) return
       const json = await res.json()
-      console.log(json.data)
       if (json.data.length === 0) return
 
-      console.log(json.data[0]?.attributes?.geolocation)
       this.points = json.data[0]?.attributes?.geolocation
       this.drawPoints(this.points)
     },
@@ -138,31 +127,30 @@ export default {
       })
     },
     resetMap() {
-      if (map.getSource('layer') !== undefined) {
-        map.removeLayer('fill')
-        map.removeLayer('outline')
-        map.removeSource('layer')
-      }
+      if (this.map.getSource('layer') === undefined) return
+
+      this.map.removeLayer('fill')
+      this.map.removeLayer('outline')
+      this.map.removeSource('layer')
     },
     drawPoints(points: Array<{ lng: number; lat: number }>) {
       if (!points || points.length === 0) return
-      const position = [[...points.map((point) => [point.lng, point.lat])]]
 
       this.resetMap()
+      const coordinates = [[...points.map((point) => [point.lng, point.lat])]]
 
-      map.addSource('layer', {
+      this.map.addSource('layer', {
         type: 'geojson',
         data: {
           type: 'Feature',
           geometry: {
             type: 'Polygon',
-            coordinates: position
+            coordinates
           },
-
           properties: {}
         }
       })
-      map.addLayer({
+      this.map.addLayer({
         id: 'fill',
         type: 'fill',
         source: 'layer',
@@ -172,7 +160,7 @@ export default {
           'fill-opacity': 0.5
         }
       })
-      map.addLayer({
+      this.map.addLayer({
         id: 'outline',
         type: 'line',
         source: 'layer',
@@ -186,6 +174,7 @@ export default {
   }
 }
 </script>
+
 <style>
 #layout {
   flex: 1;
@@ -200,7 +189,7 @@ export default {
 #sidebar {
   display: flex;
   flex-direction: column;
-  background-color: hsl(0, 2%, 70%);
+  background-color: hsl(0, 0%, 93%);
   color: #2f243a;
   padding: 20px 12px;
   font-family: monospace;
