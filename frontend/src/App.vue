@@ -42,6 +42,9 @@ export default {
     },
     addPoint(point: { lng: number; lat: number }) {
       this.points.push(point)
+
+      const map = this.$refs.map as any
+      map.drawPoints()
     },
     updatePoints(points: Array<{ lng: number; lat: number }>) {
       this.points = points

@@ -115,7 +115,7 @@ hr {
 }
 
 button {
-  background-color: #db8a74;
+  background-color: hsl(203, 86%, 80%);
   border-radius: 8px;
   border-style: none;
   box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset;
@@ -142,10 +142,10 @@ button {
   touch-action: manipulation;
 }
 button:hover {
-  background-color: #c47c68;
+  background-color: hsl(203, 58%, 69%);
 }
 button:active {
-  background-color: #ac6653;
+  background-color: hsl(203, 43%, 54%);
   box-shadow: none;
 }
 

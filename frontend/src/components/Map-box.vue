@@ -64,7 +64,7 @@ export default {
     },
     async drawPoints() {
       await nextTick()
-      if (!this.$props.points || this.$props.points.length === 0) return
+      if (!this.$props.points || this.$props.points.length <= 2) return
 
       this.resetMap()
       const coordinates = [
