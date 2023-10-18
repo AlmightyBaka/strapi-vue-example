@@ -15,10 +15,10 @@
         v-model="level"
         @click="$emit('resetPoints')"
       /><br />
-      <div v-if="sent">Points sent!</div>
+      <div>{{ message }}</div>
       <button role="button" @click="getPoints">Get</button>
       <button role="button" @click="postPoints">Send</button>
-      <button role="button" @click="resetPoints">Reset</button>
+      <button role="button" @click="resetPoints">Clear</button>
     </div>
   </div>
 </template>
@@ -28,39 +28,55 @@ export default {
   props: ['location', 'points'],
   emits: ['resetPoints', 'updatePoints'],
   data: () => ({
-    sent: false,
+    message: '',
     level: 0
   }),
   methods: {
     async postPoints() {
       if (this.points.length <= 2) return
 
-      this.sent = true
+      this.message = ''
 
       let res = await this.fetch(
         'PUT',
         { geolocation: this.points, level: this.level },
         `/${this.level.toString()}`
       )
+
+      this.message = res.status === 404 ? 'Level added!' : 'Level updated!'
+
       if (res.status === 404) {
-        res = await this.fetch('POST', { geolocation: this.points, level: this.level })
+        res = await this.fetch(
+          'POST',
+          { geolocation: this.points, level: this.level },
+          `/${this.level.toString()}`
+        )
       }
 
-      this.$emit('resetPoints')
+      // this.$emit('resetPoints')
     },
     async getPoints() {
-      this.sent = false
+      this.message = ''
 
       const res = await this.fetch('GET', null, `?filters[level][$eq]=${this.level.toString()}`)
-      if (!res.ok) return
+      if (!res.ok) {
+        this.message = 'Level not found'
+
+        return
+      }
       const json = await res.json()
-      if (json.data.length === 0) return
+      if (json.data.length === 0) {
+        this.message = 'Level not found'
+
+        return
+      }
+      this.message = 'Loaded level'
 
       const points = json.data[0]?.attributes?.geolocation
       this.$emit('updatePoints', points)
     },
     resetPoints() {
-      this.sent = false
+      this.message = ''
       this.$emit('resetPoints')
     },
     async fetch(method: string, data?: any, url: string = '') {
